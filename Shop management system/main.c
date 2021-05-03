@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdio_ext.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
@@ -8,7 +9,7 @@
 typedef struct Producto
 {
     int id;        //guarda el id del producto
-    int produ[50]; //alamcena el nombre del producto
+    char produ[50]; //alamcena el nombre del producto
     int precio;    //guarda el precio del producto
     int cantidad;  //guarda la cantidad de productos
 } Producto;
@@ -16,10 +17,22 @@ typedef struct Producto
 typedef struct Carrito
 {
     int idProd;      //id del producto que esta en el carrito
-    int prodNom[50]; //nombre del producto que esta en el carrito
+    char prodNom[50]; //nombre del producto que esta en el carrito
     int precio;      //precio del producto del carrito
     int cantidad;    //cantidad que se desea comprar del producto
 } Carrito;
+
+void verProductos();
+void editProducto();
+void compraProducto();
+void actualizarPds(int idp, int cantidad);
+void verCarrito();
+void menuCliente(char *cliente);
+void cliente();
+void proveedor();
+void menuProveedor();
+void aProductos();
+void eProducto();
 
 void verProductos()
 {
@@ -49,7 +62,7 @@ void verProductos()
 }
 
 void compraProducto(){
-    char res, cont; //variables para opcion del cliente
+    char res[2], cont[2]; //variables para opcion del cliente
     int idp; //variable para indicar el producto a agregar al carrito
     int cant; //variable para indicar la cantidad del producto
     FILE *ca,*p; //variable para el archivo de carrito
@@ -62,7 +75,7 @@ void compraProducto(){
         printf("\t¿Desea agregar al carrito? Ingrese una s si desea agregar o una n si no lo desea\n");
         scanf("%c",&res);
 
-        if(res == "s" || "S"){
+        if(strcmp(res,"s") == 0){
             //abrimos el archivo de carrito para añadir el producto al final
             ca = fopen("carrito.dat", "ab"); 
             printf("Ingrese el producto a añadir al carrito (id): ");
@@ -92,7 +105,7 @@ void compraProducto(){
             fclose(p); //cerramos el archivo
         }
         __fpurge(stdin); //Vaciamos el buffer
-        if(res == "n" || "N")
+        if(strcmp(res,"n") == 0)
             break;
 
     }
@@ -103,7 +116,7 @@ void actualizarPds(int idp, int cantidad){
     Producto pro, auxPro;
     int bandera; //para indicar que hubo coincidencia en el producto
 
-    p = ("productos.dat", "rb");
+    p = fopen("productos.dat", "rb");
     auxP = fopen("aux.dat", "wb"); //Creamos un archivo temporal para actualizar los productos
     while(1){
         fread(&pro, sizeof(pro),1,p);
@@ -140,7 +153,7 @@ void actualizarPds(int idp, int cantidad){
 }
 
 void verCarrito(){
-    
+
 }
 
 void menuCliente(char *cliente)
@@ -180,7 +193,6 @@ void menuCliente(char *cliente)
 
 void cliente()
 {
-    int intento = 1; //varible para intentos de logeo de usuario
     int existe;      //variable para verificar si existe tal usuario
     FILE *aClientes; //archivo de clientes
     char cliente[30];
@@ -241,7 +253,111 @@ void cliente()
     else
         printf("Verifique sus datos\n");
 }
+void proveedor()
+{
 
+    int existe;      //variable para verificar si existe tal usuario
+    FILE *aProveedor; //archivo de proveedor
+    char proveedor[30];
+    char pass[30];
+    char lProveedor[100]; //para leer la linea del proveedor del archivo
+    char lPass[100];    //para leer la linea de contraseña del proveedor del archivo
+
+    printf("Ingrese su usuario dado por la empresa: \n"); //el proveedor ingresa su usuario
+    scanf("%s", proveedor);             //se lee el usuario del cliente
+    printf("Ingrese su clave; \n");   //el proveedor ingresa su contraseña
+    scanf("%s", pass);                //se lee la contraseña del proveedor
+
+    aProveedor = fopen("proveedor.txt", "r"); //se abre el archivo que contiene los clientes en solo lectura
+
+    if (aProveedor == NULL)
+    {
+        printf("No se pudo abrir el archivo que contiene el proveedor");
+        exit(0);
+    }
+
+    while (!feof(aProveedor))
+    {                                                //se lee el archivo de clientes
+        if (fgets(lProveedor, 100, aProveedor) != NULL) //se lee la línea del usuario del cleinte
+        {
+            if (fgets(lPass, 100, aProveedor) != NULL) // se lee la línea de la contraseña
+            {
+                strcpy(lProveedor, strtok(lProveedor, "\n")); //eliminamos salto de línea si es que  hay
+                strcpy(lPass, strtok(lPass, "\n"));
+
+                //vemos si coincide el usuario y la contraseña
+                if (strcmp(proveedor, lProveedor) == 0 && strcmp(pass, lPass) == 0)
+                {
+                    existe = -1; //retornamos true; true = -1
+                    break;
+                }
+            }
+            else
+            {
+                printf("Error al iniciar sesion...");
+                exit(0);
+            }
+        }
+        else
+        {
+            printf("Error al iniciar sesion...");
+            exit(0);
+        }
+    }
+
+    fclose(aProveedor);
+
+    if (existe == -1)
+    {
+        printf("Iniciando sesion como proveedor...\n");
+        sleep(2);
+        menuProveedor();
+    }
+    else
+        printf("Verifique sus datos\n");
+}
+
+void menuProveedor()
+{
+    system("clear");
+    printf("\t\t\t======================================\n");
+    printf("\t\t\t===Bienvenido a la tienda proveedor===\n");
+    printf("\t\t\t======================================\n");
+
+    int opc;
+    while (opc != 3)
+    {
+
+        printf("\n\n\t\t¿Que desea realizar? \n\n");
+        printf("\t\t1. Agregar producto\n");
+        printf("\t\t2. Editar stock de producto\n");
+        printf("\t\t3. Cerrar sesión\n");
+        scanf("%d", &opc);
+        if (opc > 4)
+            printf("Opcion no valida\n");
+
+        switch (opc)
+        {
+        case 1:
+            system("clear");
+            aProductos(); //funcion para añadir productos
+            break;
+        case 2:
+            editProducto(); //funcion para editar stock de producto
+            break;
+        case 3:
+            system("clear");
+            break;
+        }
+    }
+}
+void aProductos(){
+
+}
+
+void editProducto(){
+
+}
 int main()
 {
     int opc;
@@ -265,7 +381,8 @@ int main()
             cliente();
             break;
         case 2:
-            // proveedor()
+            system("clear");
+            proveedor();
             break;
         case 3:
             return 0;
