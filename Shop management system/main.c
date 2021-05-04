@@ -368,16 +368,17 @@ void menuProveedor()
     printf("\t\t\t======================================\n");
 
     int opc;
-    while (opc != 3)
+    while (opc != 4)
     {
 
         printf("\n\n\t\t¿Que desea realizar? \n\n");
         printf("\t\t1. Agregar producto\n");
-        printf("\t\t2. Editar stock de producto\n");
-        printf("\t\t3. Cerrar sesión\n");
+        printf("\t\t2. Editar productos\n");
+        printf("\t\t3. Ver prodcutos\n");
+        printf("\t\t4. Cerrar sesión\n");
         printf("\n\t\tTu opcion: ");
         scanf("%d", &opc);
-        if (opc > 4)
+        if (opc > 5)
             printf("Opcion no valida\n");
 
         switch (opc)
@@ -387,9 +388,14 @@ void menuProveedor()
             aProductos(); //funcion para añadir productos
             break;
         case 2:
+            system("clear");
             editProducto(); //funcion para editar stock de producto
             break;
         case 3:
+            system("clear");
+            verProductos();
+            break;
+        case 4:
             system("clear");
             break;
         }
@@ -443,7 +449,90 @@ int idPro()
 
 void editProducto()
 {
-  
+    FILE *p, *auxP;
+    Producto pro;
+    int idp; //id para editar el producto
+    int cant, precio; //Variables para editar 
+    char nombre[50];
+    int res,res2,res3;
+    int bandera; //bandera para mantener control
+    int n, pr, c; //Variables para saber que se edita o que no
+    __fpurge(stdin); //Vaciamos el buffer
+    p = fopen("productos.dat", "rb"); //abrimos el archivo de prodcutos
+    auxP = fopen("auxE.dat", "wb");
+    verProductos();//mostramos los productos
+
+    //se pregunta por el producto a editar
+    printf("\n\n\t\tIngrese el producto a editar (id): ");
+    scanf("%d", &idp); //leemos el id del producto a editar
+    //para editar el nombre
+    printf("\n\n\t\t¿Editar el nombre? 1/0: ");
+    scanf("%d", &res);
+    if(res == 1){
+        printf("\n\n\t\tIngrese nuevo nombre: ");
+        scanf("%s", nombre);
+        n = 1; //para saber que se edito el nombre
+    }
+    //par editar el precio
+    printf("\n\n\t\t¿Editar el precio? 1/0");
+    scanf("%d", &res2);
+    if(res2 == 1){
+        printf("\n\n\t\tIngrese nuevo precio: ");
+        scanf("%d", &precio);
+        pr = 1; //para saber que se edito el precio
+    }
+    //par editar el stock
+    printf("\n\n\t\t¿Editar el stock? 1/0");
+    scanf("%d", &res3);
+    if(res3 == 1){
+        printf("\n\n\t\tIngrese nuevo stock: ");
+        scanf("%d", &cant);
+        c = 1; //para saber que se edito la cantidad o stock
+    }
+
+      while (1)
+    {
+        fread(&pro, sizeof(pro), 1, p);
+        if (feof(p)) //Si llega al final del archivo salimos
+            break;
+        if (pro.id == idp)
+        {
+            bandera = 1;                        //se encontró el producto
+            if(n == 1)
+                strcpy(pro.produ, nombre); //se actualiza el nombre
+            if( pr == 1)
+                pro.precio = precio;//se actualiza el precio
+            if( c == 1)
+                pro.cantidad = cant;            //se actualiza la cantidad
+            fwrite(&pro, sizeof(pro), 1, auxP); //se copian los productos en un archivo auxiliar
+        }
+        else
+            fwrite(&pro, sizeof(pro), 1, auxP); //se copian los productos en un archivo auxiliar
+    }
+    //cerramos los archivos
+    fclose(p);
+    fclose(auxP);
+
+    if (bandera == 0)
+        printf("No se encontró el producto\n");
+    else
+    {
+        //volvemos a abrir los archivos
+        p = fopen("productos.dat", "wb"); //se abre en escritura para actualizarlo
+        auxP = fopen("auxE.dat", "rb");    //Se abre en lectura
+        while (1)
+        {
+            fread(&pro, sizeof(pro), 1, auxP); //se guarda la estructura del archivo en pro
+            if (feof(auxP))                    //si se llega al final salimos
+                break;
+            fwrite(&pro, sizeof(pro), 1, p); //guardamos pro en el archivo de productos.dat
+        }
+    }
+
+    //cerramos los archivos
+    fclose(p);
+    fclose(auxP);
+
 }
 int main()
 {
