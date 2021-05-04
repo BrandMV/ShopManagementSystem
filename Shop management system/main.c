@@ -351,7 +351,41 @@ void menuProveedor()
         }
     }
 }
+
 void aProductos(){
+    int id = 0;
+    FILE *p, *idP; //Variable para el archivo de productos y su id
+    Producto pro; //estrucutra producto
+   
+
+    //abrimos el archvio de productos para añadir al final
+    p = fopen("productos.dat", "ab");
+    idP = fopen("idProducto.txt", "r");
+
+    //si no hay productos se crea un id inicial con 0 para luego ir incrementandolo
+    if(idP == NULL){
+        idP = fopen("idProducto.txt", "w"); //se abre en modo escritura
+        fprintf(idP, "%d", id);//imprimimos un id inicial a los productos
+        fclose(idP); //Cerramos el archivo en modo escritura
+        idP = fopen("idProducto.txt", "r"); //Abrimos el archivo en modo lectura
+    }
+    fscanf(idP, "%d", &id); //leemos el id del producto
+    fclose(idP); //Cerramos el archovps en modo lectura
+    idP = fopen("idProducto.txt", "w"); //abrimos el archivo en modo escritura
+    fprintf(idP, "%d", id+1);
+    fclose(idP);
+
+    //se agrega el producto
+    pro.id = id+1;
+    printf("Ingrese nombre del producto nuevo: ");
+    scanf("%s", pro.produ);
+    printf("Ingrese precio del producto nuevo: ");
+    scanf("%d", &pro.precio);
+    printf("Ingrese cantidad del producto nuevo: ");
+    scanf("%d", pro.cantidad);
+
+    fwrite(&pro,sizeof(pro),1, p);
+    fclose(p); //cerramos el archivo
 
 }
 
@@ -361,6 +395,7 @@ void editProducto(){
 int main()
 {
     int opc;
+
     while (opc >= 0)
     {
         printf("\t\t\t============================\n");
