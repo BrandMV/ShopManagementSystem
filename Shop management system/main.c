@@ -33,6 +33,7 @@ void proveedor();
 void menuProveedor();
 void aProductos();
 void eProducto();
+int idPro();
 
 void verProductos()
 {
@@ -44,7 +45,7 @@ void verProductos()
     printf("\t\t\tLista de productos disponibles en la tienda\n");
     printf("\t\t\t===========================================\n");
 
-    printf("\t\t\tid\tProducto\tprecio\tstock\n");
+    printf("\t\t\tid\tProducto\tprecio\tstock\n\n");
     while (1)
     {
         fread(&pro, sizeof(pro), 1, p); //leemos un producto del archivo y se guarda en pro
@@ -53,16 +54,16 @@ void verProductos()
 
         //imprimimos los productos
         printf("\t\t\t%d\t", pro.id);
-        printf("\t\t\t%d\t", pro.produ);
-        printf("\t\t\t%d\t", pro.precio);
-        printf("\t\t\t%d\n", pro.cantidad);
+        printf("%s\t\t", pro.produ);
+        printf("%d\t", pro.precio);
+        printf("%d\n\n", pro.cantidad);
     }
 
     fclose(p); //cerramos el archivo
 }
 
 void compraProducto(){
-    char res[2], cont[2]; //variables para opcion del cliente
+    char res, cont; //variables para opcion del cliente
     int idp; //variable para indicar el producto a agregar al carrito
     int cant; //variable para indicar la cantidad del producto
     FILE *ca,*p; //variable para el archivo de carrito
@@ -72,15 +73,16 @@ void compraProducto(){
     while(1){
         verProductos();
         __fpurge(stdin); //Vaciamos el buffer
-        printf("\t¿Desea agregar al carrito? Ingrese una s si desea agregar o una n si no lo desea\n");
+        printf("\n\t\t¿Desea agregar al carrito? Ingrese una s si desea agregar o una n si no lo desea\n");
+        printf("\t\tTu respuesta: ");
         scanf("%c",&res);
 
-        if(strcmp(res,"s") == 0){
+        if(res == 's'){
             //abrimos el archivo de carrito para añadir el producto al final
             ca = fopen("carrito.dat", "ab"); 
-            printf("Ingrese el producto a añadir al carrito (id): ");
+            printf("\n\t\tIngrese el producto a añadir al carrito (id): ");
             scanf("%d",&idp);//leemos el id del producto
-            printf("\nIngrese la cantidad del producto: ");
+            printf("\n\t\tIngrese la cantidad del producto: ");
             scanf("%d",&cant); //leemos la cantidad del producto
 
             //buscamos el producto
@@ -89,6 +91,11 @@ void compraProducto(){
                 fread(&pro, sizeof(pro),1,p);
                 if(feof(p))
                     break;
+
+                if(cant > pro.cantidad){
+                    printf("\t\tNo hay suficiente stock del producto :(\n\n");
+                    break;
+                }
                 if(pro.id == idp){
                     actualizarPds(idp, pro.cantidad-cant); //actualizamos la lista de productos
                     break; //salimos del if
@@ -105,8 +112,12 @@ void compraProducto(){
             fclose(p); //cerramos el archivo
         }
         __fpurge(stdin); //Vaciamos el buffer
-        if(strcmp(res,"n") == 0)
+        if(res == 'n')
+        {
+            system("clear");
             break;
+        }
+            
 
     }
 }
@@ -171,6 +182,7 @@ void menuCliente(char *cliente)
         printf("\t\t1. Comprar productos\n");
         printf("\t\t2. Ver tu carrito\n");
         printf("\t\t3. Cerrar sesión\n");
+        printf("\n\t\tTu opcion: ");
         scanf("%d", &opc);
         if (opc > 4)
             printf("Opcion no valida\n");
@@ -179,7 +191,7 @@ void menuCliente(char *cliente)
         {
         case 1:
             system("clear");
-            verProductos();
+            compraProducto();
             break;
         case 2:
             verCarrito();
@@ -200,9 +212,9 @@ void cliente()
     char lCliente[100]; //para leer la linea de cliente del archivo
     char lPass[100];    //para leer la linea de contraseña del cliente del archivo
 
-    printf("Ingrese su usuario: \n"); //el cliente ingresa su usuario
+    printf("Ingrese su usuario: "); //el cliente ingresa su usuario
     scanf("%s", cliente);             //se lee el usuario del cliente
-    printf("Ingrese su clave; \n");   //el cliente ingresa su contraseña
+    printf("\nIngrese su clave: ");   //el cliente ingresa su contraseña
     scanf("%s", pass);                //se lee la contraseña del usuario
 
     aClientes = fopen("clientes.txt", "r"); //se abre el archivo que contiene los clientes en solo lectura
@@ -263,9 +275,9 @@ void proveedor()
     char lProveedor[100]; //para leer la linea del proveedor del archivo
     char lPass[100];    //para leer la linea de contraseña del proveedor del archivo
 
-    printf("Ingrese su usuario dado por la empresa: \n"); //el proveedor ingresa su usuario
+    printf("Ingrese su usuario dado por la empresa: "); //el proveedor ingresa su usuario
     scanf("%s", proveedor);             //se lee el usuario del cliente
-    printf("Ingrese su clave; \n");   //el proveedor ingresa su contraseña
+    printf("\nIngrese su clave: ");   //el proveedor ingresa su contraseña
     scanf("%s", pass);                //se lee la contraseña del proveedor
 
     aProveedor = fopen("proveedor.txt", "r"); //se abre el archivo que contiene los clientes en solo lectura
@@ -332,6 +344,7 @@ void menuProveedor()
         printf("\t\t1. Agregar producto\n");
         printf("\t\t2. Editar stock de producto\n");
         printf("\t\t3. Cerrar sesión\n");
+        printf("\n\t\tTu opcion: ");
         scanf("%d", &opc);
         if (opc > 4)
             printf("Opcion no valida\n");
@@ -354,18 +367,36 @@ void menuProveedor()
 
 void aProductos(){
     int id = 0;
-    FILE *p, *idP; //Variable para el archivo de productos y su id
+    FILE *p;//Variable para el archivo de productos y su id
     Producto pro; //estrucutra producto
    
 
     //abrimos el archvio de productos para añadir al final
     p = fopen("productos.dat", "ab");
-    idP = fopen("idProducto.txt", "r");
+   
+    //se agrega el producto
+    pro.id = idPro();
+    printf("Ingrese nombre del producto nuevo: ");
+    scanf("%s", pro.produ);
+    printf("Ingrese precio del producto nuevo: ");
+    scanf("%d", &pro.precio);
+    printf("Ingrese cantidad del producto nuevo: ");
+    scanf("%d", &pro.cantidad);
+
+    fwrite(&pro,sizeof(pro),1, p);
+    fclose(p); //cerramos el archivo
+
+}
+int idPro(){
+    FILE *idP;
+    int id=0;
+     idP = fopen("idProducto.txt", "r");
 
     //si no hay productos se crea un id inicial con 0 para luego ir incrementandolo
     if(idP == NULL){
+        fclose(idP);
         idP = fopen("idProducto.txt", "w"); //se abre en modo escritura
-        fprintf(idP, "%d", id);//imprimimos un id inicial a los productos
+        fprintf(idP, "%d", 0);//imprimimos un id inicial a los productos
         fclose(idP); //Cerramos el archivo en modo escritura
         idP = fopen("idProducto.txt", "r"); //Abrimos el archivo en modo lectura
     }
@@ -375,17 +406,8 @@ void aProductos(){
     fprintf(idP, "%d", id+1);
     fclose(idP);
 
-    //se agrega el producto
-    pro.id = id+1;
-    printf("Ingrese nombre del producto nuevo: ");
-    scanf("%s", pro.produ);
-    printf("Ingrese precio del producto nuevo: ");
-    scanf("%d", &pro.precio);
-    printf("Ingrese cantidad del producto nuevo: ");
-    scanf("%d", pro.cantidad);
+    return id+1;
 
-    fwrite(&pro,sizeof(pro),1, p);
-    fclose(p); //cerramos el archivo
 
 }
 
@@ -405,6 +427,7 @@ int main()
         printf("\t\t1. Cliente\n");
         printf("\t\t2. Proveedor\n");
         printf("\t\t3. Salir del sistema\n");
+        printf("\n\t\tTu opcion: ");
         scanf("%d", &opc);
         if (opc > 4)
             printf("Opcion no valida\n");
