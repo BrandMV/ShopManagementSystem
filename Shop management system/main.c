@@ -24,9 +24,9 @@ typedef struct Carrito
 
 void verProductos();
 void editProducto();
-void compraProducto();
+void compraProducto(char *cliente);
 void actualizarPds(int idp, int cantidad);
-void verCarrito();
+void verCarrito(char *cliente);
 void menuCliente(char *cliente);
 void cliente();
 void proveedor();
@@ -34,6 +34,8 @@ void menuProveedor();
 void aProductos();
 void eProducto();
 int idPro();
+
+
 
 void verProductos()
 {
@@ -55,14 +57,14 @@ void verProductos()
         //imprimimos los productos
         printf("\t\t\t%d\t", pro.id);
         printf("%s\t\t", pro.produ);
-        printf("%d\t", pro.precio);
+        printf("$%d MXN\t", pro.precio);
         printf("%d\n\n", pro.cantidad);
     }
 
     fclose(p); //cerramos el archivo
 }
 
-void compraProducto()
+void compraProducto(char *cliente)
 {
     char res, cont; //variables para opcion del cliente
     int idp;        //variable para indicar el producto a agregar al carrito
@@ -70,11 +72,22 @@ void compraProducto()
     FILE *ca, *p;   //variable para el archivo de carrito
     Producto pro;
     Carrito c;
+    int aux; //variable auxiliar
+    char auxCliente[100] ; //auxiliar para abrir archivo de cliente
+    strcpy(auxCliente,cliente); //copiamos el usuario en sesion
+    // printf("\n\ncliente %s: ", cliente);
+    strcat(auxCliente,".dat"); //para el archivo de carrito del cliente en sesion
+    //concatenamos el nombre y ruta del archivo para el carrito del usuario en sesion
+    // printf("\n\ncliente %s: ", auxCliente);
+    char ruta[100] = "./carritos/"; 
+    strcat(ruta,auxCliente); 
+    
 
     while (1)
     {
         verProductos();
-        __fpurge(stdin); //Vaciamos el buffer
+        // printf("\n\nruta %s: ", ruta);
+         __fpurge(stdin); //Vaciamos el buffer
         printf("\n\t\t¿Desea agregar al carrito? Ingrese una s si desea agregar o una n si no lo desea\n");
         printf("\t\tTu respuesta: ");
         scanf("%c", &res);
@@ -82,7 +95,7 @@ void compraProducto()
         if (res == 's')
         {
             //abrimos el archivo de carrito para añadir el producto al final
-            ca = fopen("carrito.dat", "ab");
+            ca = fopen(ruta, "ab");
             printf("\n\t\tIngrese el producto a añadir al carrito (id): ");
             scanf("%d", &idp); //leemos el id del producto
             printf("\n\t\tIngrese la cantidad del producto: ");
@@ -96,16 +109,29 @@ void compraProducto()
                 if (feof(p))
                     break;
 
-                if (pro.id == idp)
+                if (pro.id == idp) //si encontramos el producto lo actualizamos
                 {
+                    if (cant > pro.cantidad)//si no hay suficiente stock salimos
+                    {
+                        printf("\n\t\tIngrese una cantidad menor a la de stock...\n");
+                        aux = 1;
+                        break;
+                    }
                     actualizarPds(idp, pro.cantidad - cant); //actualizamos la lista de productos
                     break;                                   //salimos del if
                 }
             }
             fclose(p); //Terminamos de actualizar el producto
 
+            if (aux == 1) //en caso de que el stock no sea sufciente
+            {
+                sleep(2);
+                system("clear");
+                break; //salimos
+            }
+
             //aquí guardamos el producto seleccionado en el carrito
-            c.idProd = pro.id;
+            c.idProd = pro.id; 
             strcpy(c.prodNom, pro.produ); //copiamos las cadenas
             c.precio = pro.precio;
             c.cantidad = cant;
@@ -113,7 +139,7 @@ void compraProducto()
             fclose(ca);                   //cerramos el archivo
         }
         __fpurge(stdin); //Vaciamos el buffer
-        if (res == 'n')
+        if (res == 'n')//salimos si no se quiere agregar nada al carrito
         {
             system("clear");
             break;
@@ -168,14 +194,21 @@ void actualizarPds(int idp, int cantidad)
     fclose(auxP);
 }
 
-void verCarrito()
+void verCarrito(char *cliente)
 {
 
     FILE *carrito;
     Carrito c;
     int costo = 0; //para saber cuanto debe pagar
-
-    carrito = fopen("carrito.dat", "rb");//abrimos el archivo de carrito
+    char ruta[100] = "./carritos/"; 
+    char auxCliente[100] ; //auxiliar para abrir archivo de cliente
+    strcpy(auxCliente,cliente);
+    // printf("\n\ncliente %s: ", cliente);
+    strcat(auxCliente,".dat"); //para el archivo de carrito del cliente en sesion
+    strcat(ruta,auxCliente); 
+ 
+    // printf("\ncliente: %s", ruta);
+    carrito = fopen(ruta, "rb"); //abrimos el archivo de carrito
 
     printf("\t\t\tid\tProducto\tprecio\tcantidad\n\n");
     while (1)
@@ -193,7 +226,7 @@ void verCarrito()
         costo += c.precio * c.cantidad;
     }
 
-    printf("\n\t\t\tTotal a pagar: %d", costo);
+    printf("\n\t\t\tTotal a pagar: $%d MXN", costo);
 
     fclose(carrito); //cerramos el archivo
 }
@@ -222,10 +255,11 @@ void menuCliente(char *cliente)
         {
         case 1:
             system("clear");
-            compraProducto();
+            compraProducto(cliente);
             break;
         case 2:
-            verCarrito();
+            system("clear");
+            verCarrito(cliente);
             break;
         case 3:
             system("clear");
@@ -407,6 +441,7 @@ void aProductos()
     int id = 0;
     FILE *p;      //Variable para el archivo de productos y su id
     Producto pro; //estrucutra producto
+    char producto[50]; //almacena nombre del producto
 
     //abrimos el archvio de productos para añadir al final
     p = fopen("productos.dat", "ab");
@@ -414,13 +449,18 @@ void aProductos()
     //se agrega el producto
     pro.id = idPro();
     printf("Ingrese nombre del producto nuevo: ");
-    scanf("%s", pro.produ);
-    printf("Ingrese precio del producto nuevo: ");
-    scanf("%d", &pro.precio);
+    __fpurge(stdin); //Vaciamos el buffer
+    fgets(producto, 50, stdin); //leemos el producto con fgets para aceptar espacios
+    
+    if((strlen(producto) > 0 ) && (producto[strlen(producto) - 1] == '\n'))
+        producto[strlen(producto) - 1] = '\0'; //eliminamos el salto de linea de fgets
+    strcpy(pro.produ,producto); //copiamos el nombre del producto en el archivo
+    printf("\nIngrese precio del producto nuevo: ");
+    scanf("%d", &pro.precio); //leemos el precio
     printf("Ingrese cantidad del producto nuevo: ");
-    scanf("%d", &pro.cantidad);
+    scanf("%d", &pro.cantidad); //leemos la cantidad
 
-    fwrite(&pro, sizeof(pro), 1, p);
+    fwrite(&pro, sizeof(pro), 1, p); //agregamos el producto
     fclose(p); //cerramos el archivo
 }
 int idPro()
@@ -451,16 +491,16 @@ void editProducto()
 {
     FILE *p, *auxP;
     Producto pro;
-    int idp; //id para editar el producto
-    int cant, precio; //Variables para editar 
+    int idp;          //id para editar el producto
+    int cant, precio; //Variables para editar
     char nombre[50];
-    int res,res2,res3;
-    int bandera; //bandera para mantener control
-    int n, pr, c; //Variables para saber que se edita o que no
-    __fpurge(stdin); //Vaciamos el buffer
+    int res, res2, res3;
+    int bandera;                      //bandera para mantener control
+    int n, pr, c;                     //Variables para saber que se edita o que no
+    __fpurge(stdin);                  //Vaciamos el buffer
     p = fopen("productos.dat", "rb"); //abrimos el archivo de prodcutos
     auxP = fopen("auxE.dat", "wb");
-    verProductos();//mostramos los productos
+    verProductos(); //mostramos los productos
 
     //se pregunta por el producto a editar
     printf("\n\n\t\tIngrese el producto a editar (id): ");
@@ -468,7 +508,8 @@ void editProducto()
     //para editar el nombre
     printf("\n\n\t\t¿Editar el nombre? 1/0: ");
     scanf("%d", &res);
-    if(res == 1){
+    if (res == 1)
+    {
         printf("\n\n\t\tIngrese nuevo nombre: ");
         scanf("%s", nombre);
         n = 1; //para saber que se edito el nombre
@@ -476,7 +517,8 @@ void editProducto()
     //par editar el precio
     printf("\n\n\t\t¿Editar el precio? 1/0");
     scanf("%d", &res2);
-    if(res2 == 1){
+    if (res2 == 1)
+    {
         printf("\n\n\t\tIngrese nuevo precio: ");
         scanf("%d", &precio);
         pr = 1; //para saber que se edito el precio
@@ -484,25 +526,26 @@ void editProducto()
     //par editar el stock
     printf("\n\n\t\t¿Editar el stock? 1/0");
     scanf("%d", &res3);
-    if(res3 == 1){
+    if (res3 == 1)
+    {
         printf("\n\n\t\tIngrese nuevo stock: ");
         scanf("%d", &cant);
         c = 1; //para saber que se edito la cantidad o stock
     }
 
-      while (1)
+    while (1)
     {
         fread(&pro, sizeof(pro), 1, p);
         if (feof(p)) //Si llega al final del archivo salimos
             break;
         if (pro.id == idp)
         {
-            bandera = 1;                        //se encontró el producto
-            if(n == 1)
+            bandera = 1; //se encontró el producto
+            if (n == 1)
                 strcpy(pro.produ, nombre); //se actualiza el nombre
-            if( pr == 1)
-                pro.precio = precio;//se actualiza el precio
-            if( c == 1)
+            if (pr == 1)
+                pro.precio = precio; //se actualiza el precio
+            if (c == 1)
                 pro.cantidad = cant;            //se actualiza la cantidad
             fwrite(&pro, sizeof(pro), 1, auxP); //se copian los productos en un archivo auxiliar
         }
@@ -519,7 +562,7 @@ void editProducto()
     {
         //volvemos a abrir los archivos
         p = fopen("productos.dat", "wb"); //se abre en escritura para actualizarlo
-        auxP = fopen("auxE.dat", "rb");    //Se abre en lectura
+        auxP = fopen("auxE.dat", "rb");   //Se abre en lectura
         while (1)
         {
             fread(&pro, sizeof(pro), 1, auxP); //se guarda la estructura del archivo en pro
@@ -532,7 +575,6 @@ void editProducto()
     //cerramos los archivos
     fclose(p);
     fclose(auxP);
-
 }
 int main()
 {
