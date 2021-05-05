@@ -42,7 +42,14 @@ void verProductos()
     FILE *p;      //para ver los productos contenidos en un archivo
     Producto pro; // estructura de tipo prodcuto
 
-    p = fopen("productos.dat", "rb");
+    p = fopen("productos.dat", "rb"); //abrimos el archivo de productos
+
+    //si no hay productos salimos
+    if( p == NULL){
+        printf("\t\t\tNo hay productos aun");
+        return;
+    }
+        
     printf("\t\t\t==========================================\n");
     printf("\t\t\tLista de productos disponibles en la tienda\n");
     printf("\t\t\t===========================================\n");
@@ -209,6 +216,12 @@ void verCarrito(char *cliente)
  
     // printf("\ncliente: %s", ruta);
     carrito = fopen(ruta, "rb"); //abrimos el archivo de carrito
+
+    //si no existe el archivo de carrito nos salimos
+     if( carrito == NULL){
+        printf("\t\t\tNo tienes prodcutos en tu carrito");
+        return;
+    }
 
     printf("\t\t\tid\tProducto\tprecio\tcantidad\n\n");
     while (1)
