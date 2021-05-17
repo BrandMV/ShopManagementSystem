@@ -1,8 +1,9 @@
 #include <stdio.h>
-#include <stdio_ext.h>
+#include <stdio_ext.h>//para usar __fpurge(stdin)
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <pthread.h> //libreria para hilos
 #include <wait.h>   //define las declaraciones de espera
 #include <unistd.h> //define las declaraciones de espera
 
@@ -22,57 +23,125 @@ typedef struct Carrito
     int cantidad;     //cantidad que se desea comprar del producto
 } Carrito;
 
-void verProductos();
+void *verProductos(void *args);
 void editProducto();
 void compraProducto(char *cliente);
 void actualizarPds(int idp, int cantidad);
-void verCarrito(char *cliente);
+void *verCarrito(void *client);
 void menuCliente(char *cliente);
-void cliente();
-void proveedor();
+void *cliente(void *args);
+void *proveedor(void *args);
 void menuProveedor();
 void aProductos();
 void eProducto();
 int idPro();
 
-
-
-void verProductos()
+void *cliente(void *args)
 {
-    FILE *p;      //para ver los productos contenidos en un archivo
-    Producto pro; // estructura de tipo prodcuto
+    int existe;      //variable para verificar si existe tal usuario
+    FILE *aClientes; //archivo de clientes
+    char cliente[30];
+    char pass[30];
+    char lCliente[100]; //para leer la linea de cliente del archivo
+    char lPass[100];    //para leer la linea de contraseña del cliente del archivo
 
-    p = fopen("productos.dat", "rb"); //abrimos el archivo de productos
+    printf("Ingrese su usuario: "); //el cliente ingresa su usuario
+    scanf("%s", cliente);           //se lee el usuario del cliente
+    printf("\nIngrese su clave: "); //el cliente ingresa su contraseña
+    scanf("%s", pass);              //se lee la contraseña del usuario
 
-    //si no hay productos salimos
-    if( p == NULL){
-        printf("\t\t\tNo hay productos aun");
-        return;
-    }
-        
-    printf("\t\t\t==========================================\n");
-    printf("\t\t\tLista de productos disponibles en la tienda\n");
-    printf("\t\t\t===========================================\n");
+    aClientes = fopen("clientes.txt", "r"); //se abre el archivo que contiene los clientes en solo lectura
 
-    printf("\t\t\tid\tProducto\tprecio\tstock\n\n");
-    while (1)
+    if (aClientes == NULL)
     {
-        fread(&pro, sizeof(pro), 1, p); //leemos un producto del archivo y se guarda en pro
-        if (feof(p))                    //cuando llegamos al final se cierra
-            break;
-
-        //imprimimos los productos
-        printf("\t\t\t%d\t", pro.id);
-        printf("%s\t\t", pro.produ);
-        printf("$%d MXN\t", pro.precio);
-        printf("%d\n\n", pro.cantidad);
+        printf("No se pudo abrir el archivo que contiene los clientes");
+        exit(0);
     }
 
-    fclose(p); //cerramos el archivo
+    while (!feof(aClientes))
+    {                                                //se lee el archivo de clientes
+        if (fgets(lCliente, 100, aClientes) != NULL) //se lee la línea del usuario del cleinte
+        {
+            if (fgets(lPass, 100, aClientes) != NULL) // se lee la línea de la contraseña
+            {
+                strcpy(lCliente, strtok(lCliente, "\n")); //eliminamos salto de línea si es que  hay
+                strcpy(lPass, strtok(lPass, "\n"));
+
+                //vemos si coincide el usuario y la contraseña
+                if (strcmp(cliente, lCliente) == 0 && strcmp(pass, lPass) == 0)
+                {
+                    existe = -1; //retornamos true; ture = -1
+                    break;
+                }
+            }
+            else
+            {
+                printf("Error al iniciar sesion...");
+                exit(0);
+            }
+        }
+        else
+        {
+            printf("Error al iniciar sesion...");
+            exit(0);
+        }
+    }
+
+    fclose(aClientes);
+
+    if (existe == -1)
+    {
+        printf("Iniciando sesion...\n");
+        sleep(2);
+        menuCliente(cliente);
+    }
+    else
+        printf("Verifique sus datos\n");
+}
+
+void menuCliente(char *cliente)
+{
+    pthread_t carrito; //hilo para ver el carrito
+    system("clear");
+    printf("\t\t\t=====================================\n");
+    printf("\t\t\t===Bienvenido a la tienda %s===\n", cliente);
+    printf("\t\t\t=====================================\n");
+
+    int opc;
+    while (opc != 3)
+    {
+
+        printf("\n\n\t\t¿Que desea realizar? \n\n");
+        printf("\t\t1. Comprar productos\n");
+        printf("\t\t2. Ver tu carrito\n");
+        printf("\t\t3. Cerrar sesión\n");
+        printf("\n\t\tTu opcion: ");
+        scanf("%d", &opc);
+        if (opc > 4)
+            printf("Opcion no valida\n");
+
+        switch (opc)
+        {
+        case 1:
+            system("clear");
+            compraProducto(cliente);
+            break;
+        case 2:
+            system("clear");
+            if(0 != pthread_create(&carrito, NULL, verCarrito, (void *) cliente))
+                exit(0);
+            pthread_join(carrito, NULL);//Esperamos al hilo
+            break;
+        case 3:
+            system("clear");
+            break;
+        }
+    }
 }
 
 void compraProducto(char *cliente)
 {
+    pthread_t productos; //hilo para ver los productos
     char res, cont; //variables para opcion del cliente
     int idp;        //variable para indicar el producto a agregar al carrito
     int cant;       //variable para indicar la cantidad del producto
@@ -92,7 +161,10 @@ void compraProducto(char *cliente)
 
     while (1)
     {
-        verProductos();
+        //creamos el hilo para mostrar los prodcutos
+        if(pthread_create(&productos, NULL, verProductos, NULL) != 0)
+            exit(0);
+        pthread_join(productos, NULL);//Esperamos al hilo
         // printf("\n\nruta %s: ", ruta);
          __fpurge(stdin); //Vaciamos el buffer
         printf("\n\t\t¿Desea agregar al carrito? Ingrese una s si desea agregar o una n si no lo desea\n");
@@ -201,9 +273,9 @@ void actualizarPds(int idp, int cantidad)
     fclose(auxP);
 }
 
-void verCarrito(char *cliente)
+void *verCarrito(void *client)
 {
-
+    char *cliente = (char *)client;
     FILE *carrito;
     Carrito c;
     int costo = 0; //para saber cuanto debe pagar
@@ -219,15 +291,13 @@ void verCarrito(char *cliente)
 
     //si no existe el archivo de carrito nos salimos
      if( carrito == NULL){
-        printf("\t\t\tNo tienes prodcutos en tu carrito");
-        return;
+        printf("\t\t\tNo tienes productos en tu carrito");
+        exit(0);
     }
-
     printf("\t\t\tid\tProducto\tprecio\tcantidad\n\n");
     while (1)
     {
         fread(&c, sizeof(c), 1, carrito); //leemos un producto del archivo y se guarda en pro
-
         if (feof(carrito)) //cuando llegamos al final se cierra
             break;
 
@@ -240,112 +310,11 @@ void verCarrito(char *cliente)
     }
 
     printf("\n\t\t\tTotal a pagar: $%d MXN", costo);
-
     fclose(carrito); //cerramos el archivo
 }
 
-void menuCliente(char *cliente)
+void *proveedor(void *args)
 {
-    system("clear");
-    printf("\t\t\t=====================================\n");
-    printf("\t\t\t===Bienvenido a la tienda %s===\n", cliente);
-    printf("\t\t\t=====================================\n");
-
-    int opc;
-    while (opc != 3)
-    {
-
-        printf("\n\n\t\t¿Que desea realizar? \n\n");
-        printf("\t\t1. Comprar productos\n");
-        printf("\t\t2. Ver tu carrito\n");
-        printf("\t\t3. Cerrar sesión\n");
-        printf("\n\t\tTu opcion: ");
-        scanf("%d", &opc);
-        if (opc > 4)
-            printf("Opcion no valida\n");
-
-        switch (opc)
-        {
-        case 1:
-            system("clear");
-            compraProducto(cliente);
-            break;
-        case 2:
-            system("clear");
-            verCarrito(cliente);
-            break;
-        case 3:
-            system("clear");
-            break;
-        }
-    }
-}
-
-void cliente()
-{
-    int existe;      //variable para verificar si existe tal usuario
-    FILE *aClientes; //archivo de clientes
-    char cliente[30];
-    char pass[30];
-    char lCliente[100]; //para leer la linea de cliente del archivo
-    char lPass[100];    //para leer la linea de contraseña del cliente del archivo
-
-    printf("Ingrese su usuario: "); //el cliente ingresa su usuario
-    scanf("%s", cliente);           //se lee el usuario del cliente
-    printf("\nIngrese su clave: "); //el cliente ingresa su contraseña
-    scanf("%s", pass);              //se lee la contraseña del usuario
-
-    aClientes = fopen("clientes.txt", "r"); //se abre el archivo que contiene los clientes en solo lectura
-
-    if (aClientes == NULL)
-    {
-        printf("No se pudo abrir el archivo que contiene los clientes");
-        exit(0);
-    }
-
-    while (!feof(aClientes))
-    {                                                //se lee el archivo de clientes
-        if (fgets(lCliente, 100, aClientes) != NULL) //se lee la línea del usuario del cleinte
-        {
-            if (fgets(lPass, 100, aClientes) != NULL) // se lee la línea de la contraseña
-            {
-                strcpy(lCliente, strtok(lCliente, "\n")); //eliminamos salto de línea si es que  hay
-                strcpy(lPass, strtok(lPass, "\n"));
-
-                //vemos si coincide el usuario y la contraseña
-                if (strcmp(cliente, lCliente) == 0 && strcmp(pass, lPass) == 0)
-                {
-                    existe = -1; //retornamos true; ture = -1
-                    break;
-                }
-            }
-            else
-            {
-                printf("Error al iniciar sesion...");
-                exit(0);
-            }
-        }
-        else
-        {
-            printf("Error al iniciar sesion...");
-            exit(0);
-        }
-    }
-
-    fclose(aClientes);
-
-    if (existe == -1)
-    {
-        printf("Iniciando sesion...\n");
-        sleep(2);
-        menuCliente(cliente);
-    }
-    else
-        printf("Verifique sus datos\n");
-}
-void proveedor()
-{
-
     int existe;       //variable para verificar si existe tal usuario
     FILE *aProveedor; //archivo de proveedor
     char proveedor[30];
@@ -357,7 +326,6 @@ void proveedor()
     scanf("%s", proveedor);                             //se lee el usuario del cliente
     printf("\nIngrese su clave: ");                     //el proveedor ingresa su contraseña
     scanf("%s", pass);                                  //se lee la contraseña del proveedor
-
     aProveedor = fopen("proveedor.txt", "r"); //se abre el archivo que contiene los clientes en solo lectura
 
     if (aProveedor == NULL)
@@ -374,7 +342,6 @@ void proveedor()
             {
                 strcpy(lProveedor, strtok(lProveedor, "\n")); //eliminamos salto de línea si es que  hay
                 strcpy(lPass, strtok(lPass, "\n"));
-
                 //vemos si coincide el usuario y la contraseña
                 if (strcmp(proveedor, lProveedor) == 0 && strcmp(pass, lPass) == 0)
                 {
@@ -394,7 +361,6 @@ void proveedor()
             exit(0);
         }
     }
-
     fclose(aProveedor);
 
     if (existe == -1)
@@ -409,25 +375,23 @@ void proveedor()
 
 void menuProveedor()
 {
+    pthread_t productos;
     system("clear");
     printf("\t\t\t======================================\n");
     printf("\t\t\t===Bienvenido a la tienda proveedor===\n");
     printf("\t\t\t======================================\n");
-
     int opc;
     while (opc != 4)
     {
-
         printf("\n\n\t\t¿Que desea realizar? \n\n");
         printf("\t\t1. Agregar producto\n");
         printf("\t\t2. Editar productos\n");
-        printf("\t\t3. Ver prodcutos\n");
+        printf("\t\t3. Ver productos\n");
         printf("\t\t4. Cerrar sesión\n");
         printf("\n\t\tTu opcion: ");
         scanf("%d", &opc);
         if (opc > 5)
             printf("Opcion no valida\n");
-
         switch (opc)
         {
         case 1:
@@ -440,13 +404,49 @@ void menuProveedor()
             break;
         case 3:
             system("clear");
-            verProductos();
+            //creamos hilo para ver los productos
+            if(0 != pthread_create(&productos, NULL, verProductos, NULL))
+                exit(0);
+            pthread_join(productos, NULL);//Esperamos al hilo
             break;
         case 4:
             system("clear");
             break;
         }
     }
+}
+
+void *verProductos(void *args)
+{
+    FILE *p;      //para ver los productos contenidos en un archivo
+    Producto pro; // estructura de tipo prodcuto
+
+    p = fopen("productos.dat", "rb"); //abrimos el archivo de productos
+
+    //si no hay productos salimos
+    if( p == NULL){
+        printf("\t\t\tNo hay productos aun");
+    }
+        
+    printf("\t\t\t==========================================\n");
+    printf("\t\t\tLista de productos disponibles en la tienda\n");
+    printf("\t\t\t===========================================\n");
+
+    printf("\t\t\tid\tProducto\tprecio\tstock\n\n");
+    while (1)
+    {
+        fread(&pro, sizeof(pro), 1, p); //leemos un producto del archivo y se guarda en pro
+        if (feof(p))                    //cuando llegamos al final se cierra
+            break;
+
+        //imprimimos los productos
+        printf("\t\t\t%d\t", pro.id);
+        printf("%s\t\t", pro.produ);
+        printf("$%d MXN\t", pro.precio);
+        printf("%d\n\n", pro.cantidad);
+    }
+
+    fclose(p); //cerramos el archivo
 }
 
 void aProductos()
@@ -502,6 +502,7 @@ int idPro()
 
 void editProducto()
 {
+    pthread_t productos;
     FILE *p, *auxP;
     Producto pro;
     int idp;          //id para editar el producto
@@ -513,7 +514,11 @@ void editProducto()
     __fpurge(stdin);                  //Vaciamos el buffer
     p = fopen("productos.dat", "rb"); //abrimos el archivo de prodcutos
     auxP = fopen("auxE.dat", "wb");
-    verProductos(); //mostramos los productos
+
+    //creamos hilo para ver productos
+    if(0 != pthread_create(&productos, NULL, verProductos, NULL))
+        exit(0);
+    pthread_join(productos, NULL); //Esperamos al hilo
 
     //se pregunta por el producto a editar
     printf("\n\n\t\tIngrese el producto a editar (id): ");
@@ -528,7 +533,7 @@ void editProducto()
         n = 1; //para saber que se edito el nombre
     }
     //par editar el precio
-    printf("\n\n\t\t¿Editar el precio? 1/0");
+    printf("\n\n\t\t¿Editar el precio? 1/0: ");
     scanf("%d", &res2);
     if (res2 == 1)
     {
@@ -537,7 +542,7 @@ void editProducto()
         pr = 1; //para saber que se edito el precio
     }
     //par editar el stock
-    printf("\n\n\t\t¿Editar el stock? 1/0");
+    printf("\n\n\t\t¿Editar el stock? 1/0: ");
     scanf("%d", &res3);
     if (res3 == 1)
     {
@@ -592,6 +597,8 @@ void editProducto()
 int main()
 {
     int opc;
+    pthread_t client;
+    pthread_t provee;
 
     while (opc >= 0)
     {
@@ -611,11 +618,15 @@ int main()
         {
         case 1:
             system("clear");
-            cliente();
+            if(0 != pthread_create(&client, NULL, cliente, NULL)) //creamos el hilo para el cliente
+                return -1;
+            pthread_join(client, NULL);
             break;
         case 2:
             system("clear");
-            proveedor();
+            if(0 != pthread_create(&provee, NULL, proveedor, NULL)) //creamos el hilo para el cliente
+                return -1;
+            pthread_join(provee, NULL);
             break;
         case 3:
             return 0;
